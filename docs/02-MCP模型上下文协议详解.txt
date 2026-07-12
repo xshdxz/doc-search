@@ -1,0 +1,69 @@
+MCP 模型上下文协议详解
+
+一、MCP 是什么？
+
+MCP（Model Context Protocol，模型上下文协议）是 Anthropic 于 2024 年底发布的一种开放标准协议，旨在统一 AI 模型与外部工具、数据源之间的通信方式。
+
+在 MCP 出现之前，每个 AI 应用都需要为自己的 LLM 单独编写工具集成代码。如果你想让 Claude 连接 PostgreSQL，需要写一套代码；想让 ChatGPT 连接同一个 PostgreSQL，又需要写另一套代码。这导致了大量的重复工作和碎片化的开发生态。
+
+MCP 解决了这个问题：它定义了一套标准的"客户端-服务端"协议，让任何兼容 MCP 的 AI 模型都能直接调用任何兼容 MCP 的工具服务。
+
+二、MCP 的核心架构
+
+MCP 采用经典的客户端-服务端架构：
+
+MCP Client（AI 应用侧）
+    │
+    ├── STDIO Transport（标准输入输出，本地进程通信）
+    │    或
+    ├── SSE Transport（Server-Sent Events，远程 HTTP 通信）
+    │
+    ▼
+MCP Server（工具服务侧）
+    ├── Tools（可调用的工具函数）
+    ├── Resources（可读取的数据资源）
+    ├── Prompts（预定义的提示词模板）
+    └── Sampling（服务端主动请求 LLM 采样）
+
+三、MCP 的三大核心概念
+
+（1）Tools（工具）：MCP Server 暴露给 AI 调用的函数。类似 Function Calling 中的 function，但通过标准化描述（JSON Schema）让任何 AI 都能理解。
+
+（2）Resources（资源）：MCP Server 暴露给 AI 读取的静态数据。例如：
+- 数据库中的表结构
+- 文件系统中的文件列表
+- API 文档
+
+（3）Prompts（提示词模板）：预定义的提示词，帮助 AI 更好地使用该服务。
+
+四、FastMCP：快速开发 MCP Server
+
+FastMCP 是一个 Python 库，极大地简化了 MCP Server 的开发。使用 FastMCP，你只需要几行代码就能创建一个功能完整的 MCP 服务：
+
+核心特点：
+- 装饰器风格：用 @mcp.tool() 声明工具函数
+- 自动类型推断：根据 Python 类型注解自动生成 JSON Schema
+- 支持多种传输方式：STDIO 和 SSE 开箱即用
+- 与 LangChain/LangGraph 无缝集成
+
+五、MCP vs Function Calling
+
+这是 2026 年面试的高频问题。两者的核心区别：
+
+Function Calling（函数调用）：
+- 是 LLM 调用工具的"机制"
+- 定义在 LLM API 层面
+- 每个 LLM 厂商有自己的实现
+- 工具定义随 API 请求传递
+
+MCP（模型上下文协议）：
+- 是工具服务的"标准化协议"
+- 定义在服务层面
+- 跨厂商、跨模型通用
+- 工具定义在 MCP Server 中集中管理
+
+类比：Function Calling 是"插座接口"，MCP 是"USB-C 标准"。前者定义了怎么插，后者定义了插什么。
+
+六、为什么 MCP 对秋招很重要？
+
+截至 2026 年，MCP 已被 28% 的财富 500 强企业采用。在 AI 应用开发岗位的面试中，MCP 已经成为必问题。掌握 MCP 意味着你具备了企业级 AI 系统集成的能力，这是区分"会用 API"和"能做架构"的关键分水岭。

@@ -1,0 +1,72 @@
+LangGraph 与多智能体系统开发实战
+
+一、LangGraph 是什么？
+
+LangGraph 是 LangChain 团队开发的一个用于构建有状态、多步骤 AI Agent 应用的框架。它的核心思想是将 Agent 的执行流程建模为"有向图"（StateGraph），其中每个节点代表一个处理步骤，每条边代表步骤之间的流转关系。
+
+与传统的 Chain（链式调用）不同，LangGraph 支持：
+- 条件分支：根据上一步的结果决定下一步走哪条路
+- 循环：失败时重试、信息不足时补充检索
+- 状态持久化：随时保存和恢复 Agent 的执行状态
+- 人机协作：在执行关键步骤前暂停等待人工审批
+
+二、StateGraph 核心概念
+
+（1）State（状态）：Agent 在执行过程中需要维护的所有数据。通常是一个 TypedDict，包含 messages（消息历史）、next_action（下一步动作）、intermediate_results（中间结果）等字段。
+
+（2）Nodes（节点）：图中的处理单元。每个节点是一个 Python 函数，接收当前 State 作为输入，返回更新后的 State。常见的节点类型包括：
+- agent 节点：调用 LLM 进行推理决策
+- tools 节点：执行具体的工具调用
+- human_approval 节点：暂停等待人工审批
+- retrieval 节点：从知识库检索相关文档
+
+（3）Edges（边）：节点之间的连接。分为：
+- 普通边（Edge）：无条件地从 A 节点走到 B 节点
+- 条件边（Conditional Edge）：根据 State 中的某个字段决定下一步走向
+- 入口点（Entry Point）：流程开始时的第一个节点
+
+三、常用的 Agent 架构模式
+
+（1）ReAct Agent
+最基础的 Agent 模式：Think → Act → Observe → Think → ... → Answer
+适用场景：简单的工具调用任务
+
+（2）Router Agent
+根据用户问题的类型，路由到不同的处理节点。
+例如：编程问题 → 代码生成节点，知识问题 → RAG 检索节点
+
+（3）Plan-and-Execute Agent
+先制定完整的执行计划，再逐步执行，最后验证结果。
+适用场景：复杂的多步骤任务
+
+（4）Multi-Agent Supervisor
+一个"监督 Agent"负责分配任务给多个"工作 Agent"，工作 Agent 各自完成子任务后汇报结果。
+适用场景：需要多种专业能力协同的大型任务
+
+四、Checkpointer：让 Agent 拥有记忆
+
+Checkpointer 是 LangGraph 的持久化组件，它能在每一步执行后自动保存 Agent 的 State。这意味着：
+- 对话中断后可以从断点恢复
+- 用户可以在任何时候查看和回退历史状态
+- 支持"时间旅行"：回到之前某个状态，从那里重新开始
+
+常用的 Checkpointer 实现：
+- MemorySaver：存内存中，开发测试用
+- SqliteSaver：存 SQLite 数据库，轻量级持久化
+- PostgresSaver：存 PostgreSQL，生产环境推荐
+
+五、MCP + LangGraph 整合
+
+将 MCP 集成到 LangGraph Agent 中是 2026 年最前沿的架构模式：
+
+1. 使用 FastMCP 创建 MCP Server，将数据库、API、文件系统等封装为标准化工具
+2. 在 LangGraph Agent 初始化时，通过 MultiServerMCPClient 加载 MCP 工具
+3. Agent 的 tools 节点自动调用 MCP 工具，无需关心底层通信细节
+4. 通过 MCP 的 Resources 机制，Agent 可以动态发现和读取数据源
+
+这种架构的核心优势：工具服务（MCP Server）和 Agent 逻辑（LangGraph）完全解耦，各自独立开发、部署和维护，通过标准协议通信。
+
+六、面试常见问题
+
+Q：LangGraph 和 LangChain 是什么关系？
+A：LangChain 是构建 LLM 应用的"工具箱"，提供了 Chain、Prompt、Retriever 等组件。LangGraph 是在 LangChain 基础上构建的"编排框架"，专门用于构建有状态的 Agent 工作流。可以把 LangChain 理解为"积木块"，LangGraph 理解为"搭建图纸"。
